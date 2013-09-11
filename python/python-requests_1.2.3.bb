@@ -3,8 +3,15 @@ HOMEPAGE = "http://docs.python-requests.org/en/latest/"
 SECTION = "devel/python"
 LICENSE = "Apache-2.0"
 
-RDEPENDS_${PN} = "python"
-PR = "r2"
+RDEPENDS_${PN} = "python \
+	python-codecs \
+	python-compression \
+	python-io \
+	python-json \
+	python-zlib \
+	"
+
+PR = "r3"
 
 SRC_URI = "git://github.com/kennethreitz/requests;protocol=git"
 
