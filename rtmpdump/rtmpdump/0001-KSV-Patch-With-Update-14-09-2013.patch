@@ -1,9 +1,8 @@
-From 14bf22afa0ea0a6255ab50e1a47c64c77f8c7ffc Mon Sep 17 00:00:00 2001
+From 5c18ec7338c6b9d59dcadc8cd65267f8fb8e32e2 Mon Sep 17 00:00:00 2001
 From: Athanasios Oikonomou <athoik@gmail.com>
-Date: Wed, 4 Sep 2013 13:31:30 +0300
-Subject: [PATCH] KSV Patch With Update 11/06/2013
+Date: Wed, 9 Oct 2013 22:32:09 +0300
+Subject: [PATCH] KSV Patch With Update 14/09/2013
 
-http://stream-recorder.com/forum/customized-rtmpdump-binaries-patch-file-t16103.html
 
 diff --git a/Makefile b/Makefile
 index a1595a8..9fe7584 100644
@@ -19,18 +18,145 @@ index a1595a8..9fe7584 100644
  LIBS_mingw=-lws2_32 -lwinmm -lgdi32
  LIB_RTMP=-Llibrtmp -lrtmp
 diff --git a/librtmp/Makefile b/librtmp/Makefile
-index 96c076b..835d4ed 100644
+index 2c1c790..e367535 100644
 --- a/librtmp/Makefile
 +++ b/librtmp/Makefile
-@@ -25,7 +25,7 @@ DEF_=-DNO_CRYPTO
- REQ_GNUTLS=gnutls
+@@ -26,7 +26,7 @@ REQ_GNUTLS=gnutls,hogweed,nettle
  REQ_OPENSSL=libssl,libcrypto
+ PUB_GNUTLS=-lgmp
  LIBZ=-lz
 -LIBS_posix=
 +LIBS_posix=-lm
  LIBS_darwin=
  LIBS_mingw=-lws2_32 -lwinmm -lgdi32
  LIB_GNUTLS=-lgnutls -lhogweed -lnettle -lgmp $(LIBZ)
+diff --git a/librtmp/Makefile.orig b/librtmp/Makefile.orig
+new file mode 100644
+index 0000000..2c1c790
+--- /dev/null
++++ b/librtmp/Makefile.orig
+@@ -0,0 +1,121 @@
++VERSION=v2.4
++
++prefix=/usr/local
++
++incdir=$(prefix)/include/librtmp
++bindir=$(prefix)/bin
++libdir=$(prefix)/lib
++mandir=$(prefix)/man
++BINDIR=$(DESTDIR)$(bindir)
++INCDIR=$(DESTDIR)$(incdir)
++LIBDIR=$(DESTDIR)$(libdir)
++MANDIR=$(DESTDIR)$(mandir)
++
++CC=$(CROSS_COMPILE)gcc
++LD=$(CROSS_COMPILE)ld
++AR=$(CROSS_COMPILE)ar
++
++SYS=posix
++CRYPTO=OPENSSL
++#CRYPTO=GNUTLS
++DEF_POLARSSL=-DUSE_POLARSSL
++DEF_OPENSSL=-DUSE_OPENSSL
++DEF_GNUTLS=-DUSE_GNUTLS
++DEF_=-DNO_CRYPTO
++REQ_GNUTLS=gnutls,hogweed,nettle
++REQ_OPENSSL=libssl,libcrypto
++PUB_GNUTLS=-lgmp
++LIBZ=-lz
++LIBS_posix=
++LIBS_darwin=
++LIBS_mingw=-lws2_32 -lwinmm -lgdi32
++LIB_GNUTLS=-lgnutls -lhogweed -lnettle -lgmp $(LIBZ)
++LIB_OPENSSL=-lssl -lcrypto $(LIBZ)
++LIB_POLARSSL=-lpolarssl $(LIBZ)
++PRIVATE_LIBS=$(LIBS_$(SYS))
++CRYPTO_LIB=$(LIB_$(CRYPTO)) $(PRIVATE_LIBS)
++CRYPTO_REQ=$(REQ_$(CRYPTO))
++CRYPTO_DEF=$(DEF_$(CRYPTO))
++PUBLIC_LIBS=$(PUB_$(CRYPTO))
++
++SO_VERSION=1
++SOX_posix=so
++SOX_darwin=dylib
++SOX_mingw=dll
++SOX=$(SOX_$(SYS))
++SO_posix=.$(SOX).$(SO_VERSION)
++SO_darwin=.$(SO_VERSION).$(SOX)
++SO_mingw=-$(SO_VERSION).$(SOX)
++SO_EXT=$(SO_$(SYS))
++
++SODIR_posix=$(LIBDIR)
++SODIR_darwin=$(LIBDIR)
++SODIR_mingw=$(BINDIR)
++SODIR=$(SODIR_$(SYS))
++
++SO_LDFLAGS_posix=-shared -Wl,-soname,$@
++SO_LDFLAGS_darwin=-dynamiclib -twolevel_namespace -undefined dynamic_lookup \
++	-fno-common -headerpad_max_install_names -install_name $(libdir)/$@
++SO_LDFLAGS_mingw=-shared -Wl,--out-implib,librtmp.dll.a
++SO_LDFLAGS=$(SO_LDFLAGS_$(SYS))
++
++INSTALL_IMPLIB_posix=
++INSTALL_IMPLIB_darwin=
++INSTALL_IMPLIB_mingw=cp librtmp.dll.a $(LIBDIR)
++INSTALL_IMPLIB=$(INSTALL_IMPLIB_$(SYS))
++
++SHARED=yes
++SODEF_yes=-fPIC
++SOLIB_yes=librtmp$(SO_EXT)
++SOINST_yes=install_so
++SO_DEF=$(SODEF_$(SHARED))
++SO_LIB=$(SOLIB_$(SHARED))
++SO_INST=$(SOINST_$(SHARED))
++
++DEF=-DRTMPDUMP_VERSION=\"$(VERSION)\" $(CRYPTO_DEF) $(XDEF)
++OPT=-O2
++CFLAGS=-Wall $(XCFLAGS) $(INC) $(DEF) $(OPT) $(SO_DEF)
++LDFLAGS=$(XLDFLAGS)
++
++
++OBJS=rtmp.o log.o amf.o hashswf.o parseurl.o
++
++all:	librtmp.a $(SO_LIB)
++
++clean:
++	rm -f *.o *.a *.$(SOX) *$(SO_EXT) librtmp.pc
++
++librtmp.a: $(OBJS)
++	$(AR) rs $@ $?
++
++librtmp$(SO_EXT): $(OBJS)
++	$(CC) $(SO_LDFLAGS) $(LDFLAGS) -o $@ $^ $> $(CRYPTO_LIB)
++	ln -sf $@ librtmp.$(SOX)
++
++log.o: log.c log.h Makefile
++rtmp.o: rtmp.c rtmp.h rtmp_sys.h handshake.h dh.h log.h amf.h Makefile
++amf.o: amf.c amf.h bytes.h log.h Makefile
++hashswf.o: hashswf.c http.h rtmp.h rtmp_sys.h Makefile
++parseurl.o: parseurl.c rtmp.h rtmp_sys.h log.h Makefile
++
++librtmp.pc: librtmp.pc.in Makefile
++	sed -e "s;@prefix@;$(prefix);" -e "s;@libdir@;$(libdir);" \
++		-e "s;@VERSION@;$(VERSION);" \
++		-e "s;@CRYPTO_REQ@;$(CRYPTO_REQ);" \
++		-e "s;@PUBLIC_LIBS@;$(PUBLIC_LIBS);" \
++		-e "s;@PRIVATE_LIBS@;$(PRIVATE_LIBS);" librtmp.pc.in > $@
++
++install:	install_base $(SO_INST)
++
++install_base:	librtmp.a librtmp.pc
++	-mkdir -p $(INCDIR) $(LIBDIR)/pkgconfig $(MANDIR)/man3 $(SODIR)
++	cp amf.h http.h log.h rtmp.h $(INCDIR)
++	cp librtmp.a $(LIBDIR)
++	cp librtmp.pc $(LIBDIR)/pkgconfig
++	cp librtmp.3 $(MANDIR)/man3
++
++install_so:	librtmp$(SO_EXT)
++	cp librtmp$(SO_EXT) $(SODIR)
++	$(INSTALL_IMPLIB)
++	cd $(SODIR); ln -sf librtmp$(SO_EXT) librtmp.$(SOX)
++
 diff --git a/librtmp/amf.c b/librtmp/amf.c
 index 563486c..81569eb 100644
 --- a/librtmp/amf.c
@@ -276,7 +402,7 @@ index 646c70c..ff1d71b 100644
  	app->av_len = applen;
  	RTMP_Log(RTMP_LOGDEBUG, "Parsed app     : %.*s", applen, p);
 diff --git a/librtmp/rtmp.c b/librtmp/rtmp.c
-index 014ff8b..08cccaa 100644
+index 014ff8b..4699b5a 100644
 --- a/librtmp/rtmp.c
 +++ b/librtmp/rtmp.c
 @@ -28,6 +28,7 @@
@@ -723,7 +849,7 @@ index 014ff8b..08cccaa 100644
    if (body[0] != 0x02)		/* make sure it is a string method name we start with */
      {
        RTMP_Log(RTMP_LOGWARNING, "%s, Sanity failed. no string method in invoke packet",
-@@ -2985,23 +3091,177 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
+@@ -2985,23 +3091,182 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
  	      RTMP_SendServerBW(r);
  	      RTMP_SendCtrl(r, 3, 0, 300);
  	    }
@@ -815,6 +941,11 @@ index 014ff8b..08cccaa 100644
 +          else if (strstr(pageUrl, "ucaster.eu"))
 +            {
 +              SendCommand(r, "vujkoMiLazarBarakovOdMokrino", TRUE);
++              RTMP_SendCreateStream(r);
++            }
++          else if (strstr(pageUrl, "yycast.com"))
++            {
++              SendCommand(r, "trajkoProkopiev", TRUE);
 +              RTMP_SendCreateStream(r);
 +            }
 +          else if ((strstr(host, "highwebmedia.com") || strstr(pageUrl, "chaturbate.com"))
@@ -916,7 +1047,7 @@ index 014ff8b..08cccaa 100644
  
  	  if (r->Link.protocol & RTMP_FEATURE_WRITE)
  	    {
-@@ -3024,7 +3284,7 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
+@@ -3024,7 +3289,7 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
      }
    else if (AVMATCH(&method, &av_onBWDone))
      {
@@ -925,7 +1056,7 @@ index 014ff8b..08cccaa 100644
          SendCheckBW(r);
      }
    else if (AVMATCH(&method, &av_onFCSubscribe))
-@@ -3056,6 +3316,7 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
+@@ -3056,6 +3321,7 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
      }
    else if (AVMATCH(&method, &av__error))
      {
@@ -933,7 +1064,7 @@ index 014ff8b..08cccaa 100644
  #ifdef CRYPTO
        AVal methodInvoked = {0};
        int i;
-@@ -3093,20 +3354,65 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
+@@ -3093,20 +3359,65 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
                /* if PublisherAuth returns 1, then reconnect */
                PublisherAuth(r, &description);
              }
@@ -1007,7 +1138,7 @@ index 014ff8b..08cccaa 100644
  #ifdef CRYPTO
        if ((r->Link.protocol & RTMP_FEATURE_WRITE) &&
                !(r->Link.pFlags & RTMP_PUB_CLEAN) &&
-@@ -3127,10 +3433,11 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
+@@ -3127,10 +3438,11 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
    else if (AVMATCH(&method, &av_onStatus))
      {
        AMFObject obj2;
@@ -1020,7 +1151,7 @@ index 014ff8b..08cccaa 100644
  
        RTMP_Log(RTMP_LOGDEBUG, "%s, onStatus: %s", __FUNCTION__, code.av_val);
        if (AVMATCH(&code, &av_NetStream_Failed)
-@@ -3194,6 +3501,46 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
+@@ -3194,6 +3506,46 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
  	    r->m_pausing = 3;
  	  }
  	}
@@ -1067,7 +1198,7 @@ index 014ff8b..08cccaa 100644
      }
    else if (AVMATCH(&method, &av_playlist_ready))
      {
-@@ -3207,6 +3554,85 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
+@@ -3207,6 +3559,85 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
  	    }
          }
      }
@@ -1153,7 +1284,7 @@ index 014ff8b..08cccaa 100644
    else
      {
  
-@@ -3232,7 +3658,8 @@ RTMP_FindFirstMatchingProperty(AMFObject *obj, const AVal *name,
+@@ -3232,7 +3663,8 @@ RTMP_FindFirstMatchingProperty(AMFObject *obj, const AVal *name,
  	  return TRUE;
  	}
  
@@ -1163,7 +1294,7 @@ index 014ff8b..08cccaa 100644
  	{
  	  if (RTMP_FindFirstMatchingProperty(&prop->p_vu.p_object, name, p))
  	    return TRUE;
-@@ -3258,7 +3685,8 @@ RTMP_FindPrefixProperty(AMFObject *obj, const AVal *name,
+@@ -3258,7 +3690,8 @@ RTMP_FindPrefixProperty(AMFObject *obj, const AVal *name,
  	  return TRUE;
  	}
  
@@ -1173,7 +1304,7 @@ index 014ff8b..08cccaa 100644
  	{
  	  if (RTMP_FindPrefixProperty(&prop->p_vu.p_object, name, p))
  	    return TRUE;
-@@ -3292,6 +3720,7 @@ DumpMetaData(AMFObject *obj)
+@@ -3292,6 +3725,7 @@ DumpMetaData(AMFObject *obj)
  	  snprintf(str, 255, "%s",
  		   prop->p_vu.p_number != 0. ? "TRUE" : "FALSE");
  	  break;
@@ -1181,7 +1312,7 @@ index 014ff8b..08cccaa 100644
  	case AMF_STRING:
  	  len = snprintf(str, 255, "%.*s", prop->p_vu.p_aval.av_len,
  		   prop->p_vu.p_aval.av_val);
-@@ -3307,7 +3736,7 @@ DumpMetaData(AMFObject *obj)
+@@ -3307,7 +3741,7 @@ DumpMetaData(AMFObject *obj)
  	}
        if (str[0] && prop->p_name.av_len)
  	{
@@ -1190,7 +1321,7 @@ index 014ff8b..08cccaa 100644
  		    prop->p_name.av_val, str);
  	}
      }
-@@ -3389,7 +3818,7 @@ HandleCtrl(RTMP *r, const RTMPPacket *packet)
+@@ -3389,7 +3823,7 @@ HandleCtrl(RTMP *r, const RTMPPacket *packet)
    unsigned int tmp;
    if (packet->m_body && packet->m_nBodySize >= 2)
      nType = AMF_DecodeInt16(packet->m_body);
@@ -1199,7 +1330,7 @@ index 014ff8b..08cccaa 100644
        packet->m_nBodySize);
    /*RTMP_LogHex(packet.m_body, packet.m_nBodySize); */
  
-@@ -3498,15 +3927,15 @@ HandleCtrl(RTMP *r, const RTMPPacket *packet)
+@@ -3498,15 +3932,15 @@ HandleCtrl(RTMP *r, const RTMPPacket *packet)
        RTMP_Log(RTMP_LOGDEBUG, "%s, SWFVerification ping received: ", __FUNCTION__);
        if (packet->m_nBodySize > 2 && packet->m_body[2] > 0x01)
  	{
@@ -1219,7 +1350,7 @@ index 014ff8b..08cccaa 100644
  	{
  	  RTMP_SendCtrl(r, 0x1B, 0, 0);
  	}
-@@ -3804,8 +4233,18 @@ HandShake(RTMP *r, int FP9HandShake)
+@@ -3804,8 +4238,18 @@ HandShake(RTMP *r, int FP9HandShake)
        serversig[4], serversig[5], serversig[6], serversig[7]);
  
    /* 2nd part of handshake */
@@ -1240,7 +1371,7 @@ index 014ff8b..08cccaa 100644
  
    if (ReadN(r, serversig, RTMP_SIG_SIZE) != RTMP_SIG_SIZE)
      return FALSE;
-@@ -4256,8 +4695,13 @@ RTMPSockBuf_Fill(RTMPSockBuf *sb)
+@@ -4256,8 +4700,13 @@ RTMPSockBuf_Fill(RTMPSockBuf *sb)
  {
    int nBytes;
  
@@ -1256,7 +1387,7 @@ index 014ff8b..08cccaa 100644
  
    while (1)
      {
-@@ -4271,6 +4715,8 @@ RTMPSockBuf_Fill(RTMPSockBuf *sb)
+@@ -4271,6 +4720,8 @@ RTMPSockBuf_Fill(RTMPSockBuf *sb)
  #endif
  	{
  	  nBytes = recv(sb->sb_socket, sb->sb_start + sb->sb_size, nBytes, 0);
@@ -1265,7 +1396,7 @@ index 014ff8b..08cccaa 100644
  	}
        if (nBytes != -1)
  	{
-@@ -4410,21 +4856,19 @@ static int
+@@ -4410,21 +4861,19 @@ static int
  HTTP_Post(RTMP *r, RTMPTCmd cmd, const char *buf, int len)
  {
    char hbuf[512];
@@ -1297,7 +1428,7 @@ index 014ff8b..08cccaa 100644
    return hlen;
  }
  
-@@ -4434,22 +4878,17 @@ HTTP_read(RTMP *r, int fill)
+@@ -4434,22 +4883,17 @@ HTTP_read(RTMP *r, int fill)
    char *ptr;
    int hlen;
  
@@ -1325,7 +1456,7 @@ index 014ff8b..08cccaa 100644
  
    ptr = r->m_sb.sb_start + sizeof("HTTP/1.1 200");
    while ((ptr = strstr(ptr, "Content-"))) {
-@@ -4457,21 +4896,31 @@ restart:
+@@ -4457,21 +4901,31 @@ restart:
      ptr += 8;
    }
    if (!ptr)
@@ -1366,7 +1497,7 @@ index 014ff8b..08cccaa 100644
  
    if (!r->m_clientID.av_val)
      {
-@@ -4491,10 +4940,17 @@ restart:
+@@ -4491,10 +4945,17 @@ restart:
        r->m_sb.sb_start++;
        r->m_sb.sb_size--;
      }
@@ -1385,7 +1516,7 @@ index 014ff8b..08cccaa 100644
  
  /* Read from the stream until we get a media packet.
   * Returns -3 if Play.Close/Stop, -2 if fatal error, -1 if no more media
-@@ -4562,162 +5018,156 @@ Read_1_Packet(RTMP *r, char *buf, unsigned int buflen)
+@@ -4562,162 +5023,156 @@ Read_1_Packet(RTMP *r, char *buf, unsigned int buflen)
  #endif
  
        if (r->m_read.flags & RTMP_READ_RESUME)
@@ -1693,7 +1824,7 @@ index 014ff8b..08cccaa 100644
  
  	  if (packet.m_nTimeStamp > 0
  	      && (r->m_read.flags & (RTMP_READ_GOTKF|RTMP_READ_GOTFLVK)))
-@@ -4977,7 +5427,7 @@ static const char flvHeader[] = { 'F', 'L', 'V', 0x01,
+@@ -4977,7 +5432,7 @@ static const char flvHeader[] = { 'F', 'L', 'V', 0x01,
    0x00, 0x00, 0x00, 0x00
  };
  
@@ -1702,7 +1833,7 @@ index 014ff8b..08cccaa 100644
  int
  RTMP_Read(RTMP *r, char *buf, int size)
  {
-@@ -5009,6 +5459,7 @@ fail:
+@@ -5009,6 +5464,7 @@ fail:
  	  memcpy(mybuf, flvHeader, sizeof(flvHeader));
  	  r->m_read.buf += sizeof(flvHeader);
  	  r->m_read.buflen -= sizeof(flvHeader);
@@ -1710,7 +1841,7 @@ index 014ff8b..08cccaa 100644
  
  	  while (r->m_read.timestamp == 0)
  	    {
-@@ -5021,13 +5472,14 @@ fail:
+@@ -5021,13 +5477,14 @@ fail:
  		  r->m_read.status = nRead;
  		  goto fail;
  		}
@@ -1732,7 +1863,7 @@ index 014ff8b..08cccaa 100644
  	      cnt += nRead;
  	      r->m_read.buf += nRead;
  	      r->m_read.buflen -= nRead;
-@@ -5178,3 +5630,284 @@ RTMP_Write(RTMP *r, const char *buf, int size)
+@@ -5178,3 +5635,284 @@ RTMP_Write(RTMP *r, const char *buf, int size)
      }
    return size+s2;
  }
@@ -2330,7 +2461,7 @@ index 3e47602..a82137f 100644
  	     defaultRTMPRequest.bufferTime);
  
 diff --git a/rtmpsrv.c b/rtmpsrv.c
-index a9e9045..27f072e 100644
+index a9e9045..f71ec97 100644
 --- a/rtmpsrv.c
 +++ b/rtmpsrv.c
 @@ -25,9 +25,13 @@
@@ -2347,7 +2478,14 @@ index a9e9045..27f072e 100644
  
  #include <signal.h>
  #include <getopt.h>
-@@ -100,6 +104,12 @@ void AVreplace(AVal *src, const AVal *orig, const AVal *repl);
+@@ -94,12 +98,19 @@ typedef struct
+ STREAMING_SERVER *rtmpServer = 0;	// server structure pointer
+ void *sslCtx = NULL;
+ 
++int file_exists(const char *fname);
+ STREAMING_SERVER *startStreaming(const char *address, int port);
+ void stopStreaming(STREAMING_SERVER * server);
+ void AVreplace(AVal *src, const AVal *orig, const AVal *repl);
  
  static const AVal av_dquote = AVC("\"");
  static const AVal av_escdquote = AVC("\\\"");
@@ -2360,7 +2498,7 @@ index a9e9045..27f072e 100644
  
  typedef struct
  {
-@@ -168,6 +178,12 @@ SAVC(level);
+@@ -168,6 +179,12 @@ SAVC(level);
  SAVC(code);
  SAVC(description);
  SAVC(secureToken);
@@ -2373,7 +2511,7 @@ index a9e9045..27f072e 100644
  
  static int
  SendConnectResult(RTMP *r, double txn)
-@@ -191,7 +207,7 @@ SendConnectResult(RTMP *r, double txn)
+@@ -191,7 +208,7 @@ SendConnectResult(RTMP *r, double txn)
    enc = AMF_EncodeNumber(enc, pend, txn);
    *enc++ = AMF_OBJECT;
  
@@ -2382,7 +2520,7 @@ index a9e9045..27f072e 100644
    enc = AMF_EncodeNamedString(enc, pend, &av_fmsVer, &av);
    enc = AMF_EncodeNamedNumber(enc, pend, &av_capabilities, 31.0);
    enc = AMF_EncodeNamedNumber(enc, pend, &av_mode, 1.0);
-@@ -213,7 +229,7 @@ SendConnectResult(RTMP *r, double txn)
+@@ -213,7 +230,7 @@ SendConnectResult(RTMP *r, double txn)
    enc = AMF_EncodeNamedString(enc, pend, &av_secureToken, &av);
  #endif
    STR2AVAL(p.p_name, "version");
@@ -2391,7 +2529,7 @@ index a9e9045..27f072e 100644
    p.p_type = AMF_STRING;
    obj.o_num = 1;
    obj.o_props = &p;
-@@ -234,7 +250,7 @@ static int
+@@ -234,7 +251,7 @@ static int
  SendResultNumber(RTMP *r, double txn, double ID)
  {
    RTMPPacket packet;
@@ -2400,7 +2538,7 @@ index a9e9045..27f072e 100644
  
    packet.m_nChannel = 0x03;     // control channel (invoke)
    packet.m_headerType = 1; /* RTMP_PACKET_SIZE_MEDIUM; */
-@@ -264,12 +280,13 @@ static const AVal av_Stopped_playing = AVC("Stopped playing");
+@@ -264,12 +281,13 @@ static const AVal av_Stopped_playing = AVC("Stopped playing");
  SAVC(details);
  SAVC(clientid);
  static const AVal av_NetStream_Authenticate_UsherToken = AVC("NetStream.Authenticate.UsherToken");
@@ -2415,7 +2553,7 @@ index a9e9045..27f072e 100644
  
    packet.m_nChannel = 0x03;     // control channel (invoke)
    packet.m_headerType = 1; /* RTMP_PACKET_SIZE_MEDIUM; */
-@@ -301,7 +318,7 @@ static int
+@@ -301,7 +319,7 @@ static int
  SendPlayStop(RTMP *r)
  {
    RTMPPacket packet;
@@ -2424,7 +2562,7 @@ index a9e9045..27f072e 100644
  
    packet.m_nChannel = 0x03;     // control channel (invoke)
    packet.m_headerType = 1; /* RTMP_PACKET_SIZE_MEDIUM; */
-@@ -329,6 +346,83 @@ SendPlayStop(RTMP *r)
+@@ -329,6 +347,83 @@ SendPlayStop(RTMP *r)
    return RTMP_SendPacket(r, &packet, FALSE);
  }
  
@@ -2508,7 +2646,7 @@ index a9e9045..27f072e 100644
  static void
  spawn_dumper(int argc, AVal *av, char *cmd)
  {
-@@ -389,6 +483,8 @@ countAMF(AMFObject *obj, int *argc)
+@@ -389,6 +484,8 @@ countAMF(AMFObject *obj, int *argc)
  	  len += 40;
  	  break;
  	case AMF_OBJECT:
@@ -2517,7 +2655,7 @@ index a9e9045..27f072e 100644
  	  len += 9;
  	  len += countAMF(&p->p_vu.p_object, argc);
  	  (*argc) += 2;
-@@ -404,12 +500,14 @@ countAMF(AMFObject *obj, int *argc)
+@@ -404,12 +501,14 @@ countAMF(AMFObject *obj, int *argc)
  static char *
  dumpAMF(AMFObject *obj, char *ptr, AVal *argv, int *argc)
  {
@@ -2534,7 +2672,7 @@ index a9e9045..27f072e 100644
        argv[ac].av_val = ptr+1;
        argv[ac++].av_len = 2;
        ptr += sprintf(ptr, " -C ");
-@@ -569,6 +667,7 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
+@@ -569,6 +668,7 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
  	  server->arglen += countAMF(&r->Link.extras, &server->argc);
  	}
        SendConnectResult(r, txn);
@@ -2542,7 +2680,7 @@ index a9e9045..27f072e 100644
      }
    else if (AVMATCH(&method, &av_createStream))
      {
-@@ -583,10 +682,26 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
+@@ -583,10 +683,26 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
        AVal usherToken;
        AMFProp_GetString(AMF_GetProp(&obj, NULL, 3), &usherToken);
        AVreplace(&usherToken, &av_dquote, &av_escdquote);
@@ -2569,7 +2707,7 @@ index a9e9045..27f072e 100644
    else if (AVMATCH(&method, &av_play))
      {
        char *file, *p, *q, *cmd, *ptr;
-@@ -600,6 +715,17 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
+@@ -600,6 +716,17 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
        if (obj.o_num > 5)
  	r->Link.length = AMFProp_GetNumber(AMF_GetProp(&obj, NULL, 5));
        */
@@ -2587,7 +2725,7 @@ index a9e9045..27f072e 100644
        if (r->Link.tcUrl.av_len)
  	{
  	  len = server->arglen + r->Link.playpath.av_len + 4 +
-@@ -617,6 +743,7 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
+@@ -617,6 +744,7 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
  	  argv[argc].av_val = ptr + 1;
  	  argv[argc++].av_len = 2;
  	  argv[argc].av_val = ptr + 5;
@@ -2595,7 +2733,7 @@ index a9e9045..27f072e 100644
  	  ptr += sprintf(ptr," -r \"%s\"", r->Link.tcUrl.av_val);
  	  argv[argc++].av_len = r->Link.tcUrl.av_len;
  
-@@ -641,6 +768,7 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
+@@ -641,6 +769,7 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
  	      argv[argc].av_val = ptr + 1;
  	      argv[argc++].av_len = 2;
  	      argv[argc].av_val = ptr + 5;
@@ -2603,7 +2741,7 @@ index a9e9045..27f072e 100644
  	      ptr += sprintf(ptr, " -W \"%s\"", r->Link.swfUrl.av_val);
  	      argv[argc++].av_len = r->Link.swfUrl.av_len;
  	    }
-@@ -663,10 +791,17 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
+@@ -663,10 +792,17 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
  	      r->Link.usherToken.av_val = NULL;
  	      r->Link.usherToken.av_len = 0;
  	    }
@@ -2625,7 +2763,7 @@ index a9e9045..27f072e 100644
  	  argv[argc].av_val = ptr + 1;
  	  argv[argc++].av_len = 2;
  	  argv[argc].av_val = ptr + 5;
-@@ -674,7 +809,13 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
+@@ -674,7 +810,13 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
  	    r->Link.playpath.av_len, r->Link.playpath.av_val);
  	  argv[argc++].av_len = r->Link.playpath.av_len;
  
@@ -2640,7 +2778,7 @@ index a9e9045..27f072e 100644
  	  /* strip trailing URL parameters */
  	  q = memchr(av.av_val, '?', av.av_len);
  	  if (q)
-@@ -708,25 +849,82 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
+@@ -708,25 +850,82 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
  
  	  memcpy(file, av.av_val, av.av_len);
  	  file[av.av_len] = '\0';
@@ -2737,7 +2875,7 @@ index a9e9045..27f072e 100644
  	  now = RTMP_GetTime();
  	  if (now - server->filetime < DUPTIME && AVMATCH(&argv[argc], &server->filename))
  	    {
-@@ -740,7 +938,21 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
+@@ -740,7 +939,21 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
  	      server->filetime = now;
  	      free(server->filename.av_val);
  	      server->filename = argv[argc++];
@@ -2760,7 +2898,7 @@ index a9e9045..27f072e 100644
  	    }
  
  	  free(cmd);
-@@ -859,12 +1071,18 @@ controlServerThread(void *unused)
+@@ -859,12 +1072,18 @@ controlServerThread(void *unused)
  	{
  	case 'q':
  	  RTMP_LogPrintf("Exiting\n");
@@ -2781,7 +2919,7 @@ index a9e9045..27f072e 100644
      }
    TFRET();
  }
-@@ -1052,7 +1270,6 @@ stopStreaming(STREAMING_SERVER * server)
+@@ -1052,7 +1271,6 @@ stopStreaming(STREAMING_SERVER * server)
      }
  }
  
@@ -2789,7 +2927,7 @@ index a9e9045..27f072e 100644
  void
  sigIntHandler(int sig)
  {
-@@ -1189,3 +1406,15 @@ AVreplace(AVal *src, const AVal *orig, const AVal *repl)
+@@ -1189,3 +1407,15 @@ AVreplace(AVal *src, const AVal *orig, const AVal *repl)
    src->av_val = dest;
    src->av_len = dptr - dest;
  }
@@ -2806,7 +2944,7 @@ index a9e9045..27f072e 100644
 +  return FALSE;
 +}
 diff --git a/rtmpsuck.c b/rtmpsuck.c
-index e886179..3d2137a 100644
+index e886179..0c86ad9 100644
 --- a/rtmpsuck.c
 +++ b/rtmpsuck.c
 @@ -25,10 +25,13 @@
@@ -2958,7 +3096,7 @@ index e886179..3d2137a 100644
 +            {
 +              if (pCmd[0] == 'p' && pCmd[1] == 'l' && pCmd[2] == 'a' && pCmd[3] == 'y' && pCmd[4] == '2')
 +                {
-+                  /* Disable bitrate transition via sending invalid command */
++                  /* Disable bitrate transition by sending invalid command */
 +                  pCmd[4] = 'z';
 +                  break;
 +                }
@@ -3188,5 +3326,5 @@ index 0913c98..13d624a 100644
  
    return thd;
 -- 
-1.7.9.5
+1.7.10.4
 

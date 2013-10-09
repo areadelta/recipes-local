@@ -10,14 +10,14 @@ inherit gitpkgv
 PKGV = "2.4+git${GITPKGV}"
 PV = "2.4+git${SRCPV}"
 SRCREV = "${AUTOREV}"
-PR = "r0"
+PR = "r1"
 
-SRC_URI = "git://git.ffmpeg.org/rtmpdump;protocol=git file://0001-KSV-Patch-With-Update-11-06-2013.patch"
+SRC_URI = "git://git.ffmpeg.org/rtmpdump;protocol=git file://0001-KSV-Patch-With-Update-14-09-2013.patch"
 
 S = "${WORKDIR}/git"
 
 do_compile() {
-	make CROSS_COMPILE=${TARGET_PREFIX} SHARED= VERSION="v2.4.GreekStreamTV\ 5ba573a+KSV"
+	make CROSS_COMPILE=${TARGET_PREFIX} SHARED= VERSION="v2.4.GreekStreamTV\ +KSV"
 }
 
 do_install() {
